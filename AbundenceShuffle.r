@@ -9,10 +9,9 @@ library(ggsci)
 
 setwd("E:/PQS_in_Plantvirus/All_viruses/FullSegment/RevisedSeq/BasicStatistics/")
 
-class_info=read.csv2("class_add_taxid.csv",sep = ",",header = F,stringsAsFactors = F)
+class_info=read.csv("../classinfo_viroid_satellite.csv",sep = ",",header = F,stringsAsFactors = F)
 colnames(class_info)=c("ncnumber","TrueSpeciesName","Family","Genus","GenomeType","Host","Segment","Species","Taxid")
 
-class_info[class_info$GenomeType=="circle-ssRNA","GenomeType"]="unknown"
 class_info[class_info$Segment=='non','Taxid']=paste(class_info[class_info$Segment=='non','Taxid'],
                                                     class_info[class_info$Segment=='non','ncnumber'],sep = '-')
 class_info[class_info$GenomeType=='unknown','GenomeType']='unclear'
@@ -84,8 +83,6 @@ head(shuffle_and_real)
 shuffle_and_real$zscore=(shuffle_and_real$real_density-shuffle_and_real$shuffle_desnity)/shuffle_and_real$sd
 head(class_info)
 head(shuffle_and_real)
-write.table(shuffle_and_real,"zscore_total.csv",col.names = T,row.names = F,quote = F,sep = ',')
-write.table(tidyr::spread(shuffle_and_real[,c(1,2,6)],key=pattern,value=zscore),"zscore.csv",col.names = T,row.names = F,quote = F,sep = ',')
 
 shuffle_and_real=merge(shuffle_and_real,unique(class_info[,c('GenomeType',"Host",'Taxid')]),by.x = 'taxid',by.y = 'Taxid',all.x = T)
 G2_compare=shuffle_and_real[shuffle_and_real$pattern=='G2'|shuffle_and_real$pattern=='GNG',]
@@ -101,7 +98,7 @@ aggregate(G3_compare$real_density,list(G3_compare$pattern),mean)
 head(G2_compare)
 
 
-G2_compare$europro=ifelse(G2_compare$Host %in% c('fungi',"plant","animal","protist"),"eukaryote",
+G2_compare$europro=ifelse(G2_compare$Host %in% c('fungi',"plant","animal","alga","protist"),"eukaryote",
                           ifelse(G2_compare$Host %in% c("bacteria","archaea"),"prokaryote","unclear"))
 
 ggplot(G2_compare,aes(x=pattern,y=zscore,fill=pattern))+
@@ -201,7 +198,7 @@ ggsave("G2PQS_zscore_Host.pdf",width = 9,height =9)
 
 G3violion=G3_compare[,c(1,2,6,7)]
 G3violion=tidyr::spread(G3violion,key=pattern,value=zscore)
-G3_compare$europro=ifelse(G3_compare$Host %in% c('fungi',"plant","animal","protist"),"eukaryote",
+G3_compare$europro=ifelse(G3_compare$Host %in% c('fungi',"plant","alga","animal","protist"),"eukaryote",
                           ifelse(G3_compare$Host %in% c("bacteria","archaea"),"prokaryote","unclear"))
 
 head(G3_compare)

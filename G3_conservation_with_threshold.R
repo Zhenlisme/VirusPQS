@@ -4,11 +4,11 @@ library(ggplot2)
 library(ggsci)
 library(ggpubr)
 
-setwd("E:/PQS_in_Plantvirus/All_viruses/FullSegment/RevisedSeq/StructuralConservation/")
+setwd("D:/毕业文件/李振数据备份/课题数据备份/RevisedSeq/StructuralConservation/")
 
-class_info=read.csv2("../BasicStatistics/class_add_taxid.csv",sep = ",",header = F,stringsAsFactors = F)
+class_info=read.csv("../classinfo_viroid_satellite.csv",sep = ",",header = F,stringsAsFactors = F)
 colnames(class_info)=c("ncnumber","TrueSpeciesName","Family","Genus","GenomeType","Host","Segment","Species","Taxid")
-class_info[class_info$GenomeType=="circle-ssRNA","GenomeType"]="unknown"
+
 class_info[class_info$Segment=='non','Taxid']=paste(class_info[class_info$Segment=='non','Taxid'],
                                                     class_info[class_info$Segment=='non','ncnumber'],sep = '-')
 class_info[class_info$GenomeType=='unknown','GenomeType']='unclear'
@@ -64,6 +64,7 @@ head(spreaded_mean_conservation)
 
 GGNG=na.omit(spreaded_mean_conservation[,c(1,2,3,4,5,6,7)])
 GNGG=na.omit(spreaded_mean_conservation[,c(1,2,3,4,8,9,10)])
+head(GGNG)
 
 GGNG=tidyr::gather(GGNG,key=pattern,value=Con,-AccessionNumber)
 marker=as.data.frame(do.call(rbind,strsplit(GGNG$pattern,split = "_")))
@@ -76,20 +77,31 @@ GNGG$extension=marker$V2
 GNGG$pattern=marker$V1
 head(GNGG)
 
+GNGG$extension=factor(GNGG$extension,levels = c('0','5','10'),
+                      labels = c('extension=0','extension=5','extension=10'))
+
 GNGG=merge(GNGG,class_info[,c(1,5,6)],by.x='AccessionNumber',by.y = 'ncnumber')
-GNGG$euorpro=ifelse(GNGG$Host %in% c("plant","animal","fungi","protist"),"eukaryote",
+GNGG$euorpro=ifelse(GNGG$Host %in% c("plant","alga","animal","fungi","protist"),"eukaryote",
                      ifelse(GNGG$Host %in% c("bacteria","archaea"),"prokaryote","unclear"))
-levels(GNGG$extension)=c('extension=0','extension=10','extension=5')
+
+levels(factor(GNGG$extension))
+head(GNGG)
 
 GGNG=merge(GGNG,class_info[,c(1,5,6)],by.x='AccessionNumber',by.y = 'ncnumber')
 GGNG$euorpro=ifelse(GGNG$Host %in% c("plant","animal","fungi","protist"),"eukaryote",
                     ifelse(GGNG$Host %in% c("bacteria","archaea"),"prokaryote","unclear"))
-levels(GGNG$extension)=c('extension=0','extension=10','extension=5')
+
+GGNG$extension=factor(GGNG$extension,levels = c('0','5','10'),
+                              labels = c('extension=0','extension=5','extension=10'))
+
 
 head(GNGG)
 
+unique(GNGG$pattern)
+
+
 ggplot(GNGG,aes(x=pattern,y=Con,fill=pattern))+
-  scale_fill_npg()+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
   coord_cartesian(ylim = c(0,1.2))+
   facet_grid(extension~GenomeType)+
   theme_set(theme_bw())+
@@ -101,19 +113,99 @@ ggplot(GNGG,aes(x=pattern,y=Con,fill=pattern))+
   geom_boxplot(width=0.2,outlier.alpha = 0)+
   geom_signif(comparisons = list(c("GGGCI","GNGGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
               y_position = 1.1,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
-  theme(legend.text = element_text(face = "bold",size=24,family="serif"),
+  theme(legend.text = element_text(face = "bold",size=26,family="serif"),
         legend.title = element_blank(),
         axis.title.x=element_blank(),
-        axis.title.y = element_text(size=24,face = "bold",colour = "black",family="serif"),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
         legend.position = "top")+
-  theme(axis.text = element_text(size=24,face = "bold",colour = "black",family="serif"))+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
   guides(fill=F)+
-  theme(strip.text = element_text(face = 'bold',size=rel(1.5),color = 'black',family = 'serif'))+
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
   scale_x_discrete(breaks=c('GGGCI','GNGGCI'),labels=c('G3','GNGG'))
 
+ggsave("G3_GNGG_GTP.pdf",width = 15,height = 15)
 
 ggplot(GNGG,aes(x=pattern,y=Con,fill=pattern))+
-  scale_fill_npg()+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
+  coord_cartesian(ylim = c(0,1.2))+
+  facet_grid(extension~Host)+
+  theme_set(theme_bw())+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black",size=1.2))+
+  ylab("Pattern Conservation Value")+
+  geom_violin(trim=T,color="white")+
+  geom_boxplot(width=0.2,outlier.alpha = 0)+
+  geom_signif(comparisons = list(c("GGGCI","GNGGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
+              y_position = 1.1,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
+  theme(legend.text = element_text(face = "bold",size=26,family="serif"),
+        legend.title = element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
+        legend.position = "top")+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
+  guides(fill=F)+
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
+  scale_x_discrete(breaks=c('GGGCI','GNGGCI'),labels=c('G3','GNGG'))
+
+ggsave("G3_GNGG_Host.pdf",width = 15,height = 15)
+
+ggplot(GGNG,aes(x=pattern,y=Con,fill=pattern))+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
+  coord_cartesian(ylim = c(0,1.2))+
+  facet_grid(extension~GenomeType)+
+  theme_set(theme_bw())+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black",size=1.2))+
+  ylab("Pattern Conservation Value")+
+  geom_violin(trim=T,color="white")+
+  geom_boxplot(width=0.2,outlier.alpha = 0)+
+  geom_signif(comparisons = list(c("GGGCI","GGNGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
+              y_position = 1.1,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
+  theme(legend.text = element_text(face = "bold",size=26,family="serif"),
+        legend.title = element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
+        legend.position = "top")+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
+  guides(fill=F)+
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
+  scale_x_discrete(breaks=c('GGGCI','GGNGCI'),labels=c('G3','GGNG'))
+
+ggsave("G3_GGNG_GTP.pdf",width = 15,height = 15)
+
+ggplot(GGNG,aes(x=pattern,y=Con,fill=pattern))+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
+  coord_cartesian(ylim = c(0,1.2))+
+  facet_grid(extension~Host)+
+  theme_set(theme_bw())+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), 
+        panel.border = element_rect(colour = "black",size=1.2))+
+  ylab("Pattern Conservation Value")+
+  geom_violin(trim=T,color="white")+
+  geom_boxplot(width=0.2,outlier.alpha = 0)+
+  geom_signif(comparisons = list(c("GGGCI","GGNGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
+              y_position = 1.1,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
+  theme(legend.text = element_text(face = "bold",size=26,family="serif"),
+        legend.title = element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
+        legend.position = "top")+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
+  guides(fill=F)+
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
+  scale_x_discrete(breaks=c('GGGCI','GGNGCI'),labels=c('G3','GGNG'))
+
+ggsave("G3_GGNG_Host.pdf",width = 15,height = 15)
+
+#################################################################
+
+ggplot(GNGG,aes(x=pattern,y=Con,fill=pattern))+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
+  theme(strip.text.x = element_text(size = 26),
+        strip.text.y = element_text(size = 26))+
   coord_cartesian(ylim = c(0,1.2))+
   facet_grid(.~extension)+
   theme_set(theme_bw())+
@@ -125,20 +217,22 @@ ggplot(GNGG,aes(x=pattern,y=Con,fill=pattern))+
   geom_boxplot(width=0.2,outlier.alpha = 0)+
   geom_signif(comparisons = list(c("GGGCI","GNGGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
               y_position = 1.1,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
-  theme(legend.text = element_text(face = "bold",size=24,family="serif"),
+  theme(legend.text = element_text(face = "bold",size=26,family="serif"),
         legend.title = element_blank(),
         axis.title.x=element_blank(),
-        axis.title.y = element_text(size=24,face = "bold",colour = "black",family="serif"),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
         legend.position = "top")+
-  theme(axis.text = element_text(size=24,face = "bold",colour = "black",family="serif"))+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
   guides(fill=F)+
-  theme(strip.text = element_text(face = 'bold',size=rel(1.5),color = 'black',family = 'serif'))+
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
   scale_x_discrete(breaks=c('GGGCI','GNGGCI'),labels=c('G3','GNGG'))
 
 ggsave("G3-GNGG-ConservationIndexCompare.pdf",width = 10,height =6)
 
 ggplot(GGNG,aes(x=pattern,y=Con,fill=pattern))+
-  scale_fill_npg()+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
+  theme(strip.text.x = element_text(size = 26),
+        strip.text.y = element_text(size = 26))+
   coord_cartesian(ylim = c(0,1.2))+
   facet_grid(.~extension)+
   theme_set(theme_bw())+
@@ -150,66 +244,69 @@ ggplot(GGNG,aes(x=pattern,y=Con,fill=pattern))+
   geom_boxplot(width=0.2,outlier.alpha = 0)+
   geom_signif(comparisons = list(c("GGGCI","GGNGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
               y_position = 1.1,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
-  theme(legend.text = element_text(face = "bold",size=24,family="serif"),
-        legend.title = element_blank(),
-        axis.title.x=element_blank(),
-        axis.title.y = element_text(size=24,face = "bold",colour = "black",family="serif"),
+  theme(axis.title.x=element_blank(),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
         legend.position = "top")+
-  theme(axis.text = element_text(size=24,face = "bold",colour = "black",family="serif"))+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
   guides(fill=F)+
-  theme(strip.text = element_text(face = 'bold',size=rel(1.5),color = 'black',family = 'serif'))+
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
   scale_x_discrete(breaks=c('GGGCI','GGNGCI'),labels=c('G3','GGNG'))
 
 ggsave("G3-GGNG-ConservationIndexCompare.pdf",width = 10,height =6)
 
 
 ggplot(GNGG[GNGG$euorpro!="unclear",],aes(x=pattern,y=Con,fill=pattern))+
-  scale_fill_npg()+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
   coord_cartesian(ylim = c(0,1.2))+
   facet_grid(euorpro~extension)+
   theme_set(theme_bw())+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
         panel.border = element_rect(colour = "black",size=1.2))+
+  theme(strip.text.x = element_text(size = 26),
+        strip.text.y = element_text(size = 26))+
   ylab("Pattern Conservation Value")+
   geom_violin(trim=T,color="white")+
   geom_boxplot(width=0.2,outlier.alpha = 0)+
   geom_signif(comparisons = list(c("GGGCI","GNGGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
               y_position = 1.05,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
-  theme(legend.text = element_text(face = "bold",size=24,family="serif"),
-        legend.title = element_blank(),
-        axis.title.x=element_blank(),
-        axis.title.y = element_text(size=24,face = "bold",colour = "black",family="serif"),
+  theme(axis.title.x=element_blank(),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
         legend.position = "top")+
-  theme(axis.text = element_text(size=24,face = "bold",colour = "black",family="serif"))+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
   guides(fill=F)+
-  theme(strip.text = element_text(face = 'bold',size=rel(1.5),color = 'black',family = 'serif'))+
-  scale_x_discrete(breaks=c('GGGCI','GNGGCI'),labels=c('G3','GNGG'))
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
+  scale_x_discrete(breaks=c('GGGCI','GNGGCI'),labels=c('G3','GNGG'))+
+  scale_y_continuous(breaks = c(0,0.5,1))
 
-ggsave("euorpro_G3-GNGG_ConservationIndexCompare.pdf",width = 10,height =6)
+ggsave("euorpro_G3-GNGG_ConservationIndexCompare.pdf",width = 8,height =8)
 
 ggplot(GGNG[GGNG$euorpro!="unclear",],aes(x=pattern,y=Con,fill=pattern))+
-  scale_fill_npg()+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
   coord_cartesian(ylim = c(0,1.2))+
   facet_grid(euorpro~extension)+
   theme_set(theme_bw())+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
         panel.border = element_rect(colour = "black",size=1.2))+
+  theme(strip.text.x = element_text(size = 26),
+        strip.text.y = element_text(size = 26))+
   ylab("Pattern Conservation Value")+
   geom_violin(trim=T,color="white")+
   geom_boxplot(width=0.2,outlier.alpha = 0)+
   geom_signif(comparisons = list(c("GGGCI","GGNGCI")),family="serif",size=1,map_signif_level = T,textsize = 10,
               y_position = 1.05,tip_length = 0.02,test = wilcox.test,test.args = list(paired=T,alternative="less"))+
-  theme(legend.text = element_text(face = "bold",size=24,family="serif"),
-        legend.title = element_blank(),
-        axis.title.x=element_blank(),
-        axis.title.y = element_text(size=24,face = "bold",colour = "black",family="serif"),
+  theme(axis.title.x=element_blank(),
+        axis.title.y = element_text(size=26,face = "bold",colour = "black",family="serif"),
         legend.position = "top")+
-  theme(axis.text = element_text(size=24,face = "bold",colour = "black",family="serif"))+
+  theme(axis.text = element_text(size=26,face = "bold",colour = "black",family="serif"))+
   guides(fill=F)+
-  theme(strip.text = element_text(face = 'bold',size=rel(1.5),color = 'black',family = 'serif'))+
-  scale_x_discrete(breaks=c('GGGCI','GGNGCI'),labels=c('G3','GGNG'))
+  theme(strip.text = element_text(face = 'bold',size=rel(2),color = 'black',family = 'serif'))+
+  scale_x_discrete(breaks=c('GGGCI','GGNGCI'),labels=c('G3','GGNG'))+
+  scale_y_continuous(breaks = c(0,0.5,1))
 
-ggsave("euorpro_G3-GGNG_ConservationIndexCompare.pdf",width = 10,height =6)
+ggsave("euorpro_G3-GGNG_ConservationIndexCompare.pdf",width = 8,height =8)
+
+
+
 

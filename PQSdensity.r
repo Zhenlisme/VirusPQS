@@ -6,18 +6,23 @@ library(RColorBrewer)
 library(ggplot2)
 library(ggsci)
 
-setwd("E:/PQS_in_Plantvirus/All_viruses/FullSegment/RevisedSeq/BasicStatistics/")
+setwd("D:/毕业文件/李振数据备份/课题数据备份/RevisedSeq/BasicStatistics/")
 
-class_info=read.csv("class_add_taxid.csv",sep = ",",header = F,stringsAsFactors = F)
+class_info=read.csv("../classinfo_viroid_satellite.csv",sep = ",",header = F,stringsAsFactors = F)
 colnames(class_info)=c("ncnumber","TrueSpeciesName","Family","Genus","GenomeType","Host","Segment","Species","Taxid")
-class_info[class_info$GenomeType=="circle-ssRNA","GenomeType"]="unknown"
+
 class_info[class_info$Segment=='non','Taxid']=paste(class_info[class_info$Segment=='non','Taxid'],
                                                     class_info[class_info$Segment=='non','ncnumber'],sep = '-')
 class_info[class_info$GenomeType=='unknown','GenomeType']='unclear'
 
 head(class_info)
+class_info$GenomeType=factor(class_info$GenomeType,
+      levels = c('dsDNA','dsDNA-RT','dsRNA','ssDNA','ssRNA-RT','ssRNA(-)','ssRNA(+)','satellite','viroid','unclear'),ordered = T)
 
-length(unique(class_info$Taxid))
+unique_taxid=unique(class_info[,c('GenomeType','Host','Taxid')])
+
+aggregate(unique_taxid$Taxid,list(unique_taxid$GenomeType,unique_taxid$Host),length)
+       
 
 ggplot(unique(class_info[,c('GenomeType','Host','Taxid')]),aes(x=GenomeType,fill=Host))+
   geom_bar()+
@@ -41,8 +46,6 @@ sequence_length$genomelength=2*sequence_length$genomelength
 head(sequence_length)
 
 
-
-
 Allpattern_df=read.csv2("long_pattern_count.csv",sep=",",header = T,stringsAsFactors = F)
 head(Allpattern_df)
 
@@ -57,6 +60,7 @@ Allpattern_df=Allpattern_df[,c("ncnumber","G2","G3")]
 Allpattern_df=merge(Allpattern_df,class_info[,c("ncnumber","Taxid")],all.y = T)
 head(Allpattern_df)
 Allpattern_df=merge(Allpattern_df,sequence_length,all.x = T)
+
 head(Allpattern_df)
 
 merged_taxid_df=aggregate(Allpattern_df[,c(2,3,5)],list(Allpattern_df$Taxid),sum)
@@ -72,20 +76,19 @@ head(class_info)
 
 head(unique(class_info[,c('GenomeType','Host','Taxid')]))
 
-merged_taxid_df=merge(unique(class_info[,c('GenomeType','Host','Taxid',"Species")]),merged_taxid_df,by='Taxid',all.y = T)
+merged_taxid_df=merge(unique(class_info[,c('GenomeType','Host','Taxid')]),merged_taxid_df,by='Taxid',all.y = T)
 head(merged_taxid_df)
-merged_taxid_df$genomelength=merged_taxid_df$genomelength/2
-write.table(merged_taxid_df,"PQS density.csv",col.names = T,row.names = F,quote = F,sep=',')
-
 PQSdensity=tidyr::gather(merged_taxid_df,key=pattern,value=density,G2,G3)
 head(PQSdensity)
 
+tapply(PQSdensity$density, list(PQSdensity$pattern,PQSdensity$GenomeType), mean)
 tapply(PQSdensity$density, list(PQSdensity$pattern,PQSdensity$Host), mean)
 tapply(PQSdensity$density, list(PQSdensity$pattern), mean)
 
 head(PQSdensity)
+unique(PQSdensity$Host)
 
-PQSdensity$europro=ifelse(PQSdensity$Host %in% c('fungi',"plant","animal","protist"),"eukaryote",
+PQSdensity$europro=ifelse(PQSdensity$Host %in% c('fungi',"plant","animal","protist","alga"),"eukaryote",
                           ifelse(PQSdensity$Host %in% c("bacteria","archaea"),"prokaryote","unclear"))
 
 tapply(PQSdensity$density, list(PQSdensity$pattern,PQSdensity$europro), mean)
@@ -95,9 +98,9 @@ write.table(t(tapply(PQSdensity$density, list(PQSdensity$pattern,PQSdensity$Geno
             "genometype_density.csv",col.names = T,row.names = T,quote = F,sep = ",")
 
 ggplot(PQSdensity[PQSdensity$europro!="unclear",],aes(x=europro,y=density,fill=europro))+
-  scale_fill_npg()+
+  scale_fill_manual(values = c('#FF585D',"#FFB549"))+
   geom_violin()+
-  ylab("Density (PQS number/1,000nt)")+
+  ylab("Frequency (PQSs/1000 nt)")+
   facet_grid(pattern~.,scales = 'free_y')+
   theme_set(theme_bw())+
   theme(panel.grid.major = element_blank(),
@@ -118,7 +121,7 @@ ggplot(PQSdensity,aes(x=GenomeType,y=density,fill=pattern))+
   scale_fill_npg()+
   geom_violin()+
   facet_grid(pattern~.,scales = 'free')+
-  ylab("Density (PQS number/1,000nt)")+
+  ylab("Frequency (PQSs/1000 nt)")+
   theme_set(theme_bw())+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
@@ -134,15 +137,16 @@ ggplot(PQSdensity,aes(x=GenomeType,y=density,fill=pattern))+
 ggsave("Genometype_density.pdf",width = 6,height =6)
 
 head(PQSdensity)
-class(PQSdensity$Host)
-PQSdensity$Host=factor(PQSdensity$Host,levels = c("animal","plant","fungi","protist","archaea","bacteria","unclear"))
+
+PQSdensity$Host=factor(PQSdensity$Host,levels = c("animal","plant","alga","fungi","protist","archaea","bacteria","unclear"),ordered = T)
 levels(PQSdensity$Host)
+
 
 ggplot(PQSdensity,aes(x=Host,y=density,fill=pattern))+
   scale_fill_npg()+
   geom_violin()+
   facet_grid(pattern~.,scales = 'free')+
-  ylab("Density (PQS number/1,000nt)")+
+  ylab("Frequency (PQSs/1000 nt)")+
   theme_set(theme_bw())+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(), 
@@ -154,7 +158,6 @@ ggplot(PQSdensity,aes(x=Host,y=density,fill=pattern))+
         text = element_text(size=24,face = "bold",colour = "black",family="serif"))+
   stat_summary(fun = mean, geom = "point", 
                aes(x=Host,y=density),shape=16,size=2,color="blue",position = position_dodge(0.8))
-
 
 ggsave("HostType_density.pdf",width = 6,height =6)
 
